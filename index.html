@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goiânia 2033: O Simulador Estratégico</title>
+    
+    <!-- Carrega Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Carrega Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilo customizado para o Chart.js em dark mode */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* bg-gray-900 */
+        }
+        .chartjs-scale-label, .chartjs-point-label {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+        }
+        .chartjs-point-label {
+             color: #D1D5DB !important; /* text-gray-300 */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <!-- Container Principal do Aplicativo -->
+    <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 md:p-12 w-full max-w-6xl m-4">
+
+        <!-- Cabeçalho -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-emerald-400">Goiânia 2033 - Simulador de Futuros</h1>
+            <p class="text-lg text-gray-300 mt-2">Construa o futuro de Goiânia, equilibrando o IGMA, os ODS e o esforço da sociedade.</p>
+            <!-- NOTA ADICIONADA -->
+            <p class="text-sm text-gray-400 mt-3 max-w-3xl mx-auto">
+                <strong>IGMA:</strong> Índice de Gestão Municipal Aquila (mede a eficiência da gestão pública em 7 eixos) | <strong>ODS:</strong> Objetivos de Desenvolvimento Sustentável (metas globais da ONU para 2030).
+            </p>
+        </header>
+
+        <!-- Seção do Jogo (Escolhas) -->
+        <div id="game-container">
+            <!-- Barra de Progresso -->
+            <div class="w-full bg-gray-700 rounded-full h-2.5 mb-6">
+                <div id="progress-bar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Coluna da Pergunta e Opções -->
+                <div>
+                    <div class="text-center lg:text-left">
+                        <h2 id="question-title" class="text-2xl font-semibold text-white mt-6 mb-2"></h2>
+                        <!-- NOVO: Contexto Explicativo -->
+                        <p id="question-context" class="text-gray-300 mb-4 text-base"></p>
+                        <p id="question-text" class="text-gray-300 mb-6 text-lg font-semibold"></p>
+                    </div>
+
+                    <!-- Container das Opções -->
+                    <div id="options-container" class="grid grid-cols-1 gap-4">
+                        <!-- Opções serão injetadas pelo JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Coluna dos Gráficos Interativos -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <!-- NOVO: Gráfico de Esforço -->
+                    <h3 class="font-semibold text-white mb-3 text-lg text-center">Medidor de Esforço (Público x População)</h3>
+                    <div class="w-full max-h-[200px] flex items-center justify-center mb-4">
+                        <canvas id="effort-chart-game"></canvas>
+                    </div>
+                    <!-- NOVO: Insight do Esforço -->
+                    <div class="bg-gray-700 p-4 rounded-lg min-h-[100px]">
+                        <h4 class="font-semibold text-emerald-300 mb-2">Papel de Cada Um:</h4>
+                        <p id="effort-insight-text" class="text-sm text-gray-300">Faça sua primeira escolha para ver a análise de esforço.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Resultado (Gráfico e Insights) -->
+        <div id="result-container" class="hidden">
+            <h2 id="result-title" class="text-3xl font-bold text-emerald-400 mb-6 text-center"></h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                
+                <!-- Coluna da Esquerda: Gráficos Finais -->
+                <div class="space-y-6">
+                    <!-- Gráfico de Radar Final -->
+                    <div>
+                        <!-- Título ATUALIZADO -->
+                        <h3 class="font-semibold text-white mb-1 text-lg text-center">Resultado Final (IGMA x ODS)</h3>
+                        <!-- NOTA ADICIONADA -->
+                        <p class="text-xs text-gray-400 text-center mb-3">(Scores ODS são normalizados de 0-100 para a escala 0-10)</p>
+                        <div class="w-full max-h-[350px] flex items-center justify-center">
+                            <canvas id="radar-chart-result"></canvas>
+                        </div>
+                    </div>
+                    <!-- Gráfico de Esforço Final -->
+                    <div>
+                        <h3 class="font-semibold text-white mb-3 text-lg text-center">Esforço Total Acumulado</h3>
+                        <div class="w-full max-h-[200px] flex items-center justify-center">
+                            <canvas id="effort-chart-result"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coluna da Direita: Cenário e Insights -->
+                <div class="space-y-6">
+                    <!-- Imagem e Descrição do Cenário -->
+                    <div>
+                        <img id="result-image" 
+                             src="https://placehold.co/600x400/34d399/1f2937?text=Goi%C3%A2nia+2033" 
+                             alt="Visualização do futuro de Goiânia" 
+                             class="rounded-lg shadow-lg mb-4 w-full h-auto object-cover">
+                        <p id="result-description" class="text-gray-300 mb-4 text-base"></p>
+                    </div>
+
+                    <!-- Insights Estratégicos (Pontos Fortes/Fracos) -->
+                    <div id="strategic-insights" class="my-6">
+                        <h3 class="font-semibold text-white mb-3 text-lg">Insights Estratégicos (IGMA)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Coluna de Pontos Fortes -->
+                            <div>
+                                <h4 class="font-semibold text-emerald-400 mb-2 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                    Eixos em Destaque
+                                </h4>
+                                <div id="strengths-list" class="space-y-3"></div>
+                            </div>
+                            <!-- Coluna de Pontos de Atenção -->
+                            <div>
+                                <h4 class="font-semibold text-rose-400 mb-2 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 3.01-1.742 3.01H4.42c-1.53 0-2.493-1.676-1.743-3.01l5.58-9.92zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path></svg>
+                                    Pontos de Atenção
+                                </h4>
+                                <div id="weaknesses-list" class="space-y-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insights ODS -->
+                    <div id="ods-impacts" class="text-sm text-gray-400">
+                        <h3 class="font-semibold text-white mb-2 text-lg">Impacto nos ODS</h3>
+                        <!-- Insights ODS serão injetados aqui -->
+                    </div>
+                    
+                    <button id="restart-button" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg transition-colors text-lg mt-6">
+                        Jogar Novamente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOVO: Seção de Fontes -->
+        <footer class="text-center mt-12 border-t border-gray-700 pt-6">
+            <h4 class="font-semibold text-lg text-gray-300 mb-2">Fontes e Referências</h4>
+            <p class="text-xs text-gray-500">
+                Este simulador é um exercício de foresight estratégico e design de futuros. Os dados são baseados em:
+                <br>
+                <a href="https://igma.aquila.com.br/cidades/759" target="_blank" class="text-emerald-400 hover:underline">IGMA - Índice de Gestão Municipal Aquila (Goiânia)</a> |
+                <a href="https://www.goiania.go.gov.br/plano-diretor/" target="_blank" class="text-emerald-400 hover:underline">Plano Diretor de Goiânia</a> |
+                <a href="https://www.goiania.go.gov.br/planmobgyn-2021/" target="_blank" class="text-emerald-400 hover:underline">PlanmobGyn (Plano de Mobilidade)</a> |
+                <a href="https://brasil.un.org/pt-br/sdgs" target="_blank" class="text-emerald-400 hover:underline">Objetivos de Desenvolvimento Sustentável (ODS/ONU)</a> |
+                <a href="https://cidades.ibge.gov.br/brasil/go/goiania/panorama" target="_blank" class="text-emerald-400 hover:underline">IBGE Cidades (Goiânia)</a>
+            </p>
+            <!-- RODAPÉ ADICIONADO -->
+            <p class="text-sm text-gray-400 mt-6">
+                Elaborado por Antonio Balduino Neto - Especialista em Foresight Estratégico e Design de Futuros
+            </p>
+        </footer>
+
+    </div>
+
+    <script>
+        // --- 1. CONFIGURAÇÃO DO JOGO ---
+
+        let currentStep = 0;
+        let radarChart = null;
+        let effortChartGame = null; // Gráfico de esforço do jogo
+        let effortChartResult = null; // Gráfico de esforço do resultado
+
+        // Eixos do Gráfico de Radar (Baseado nas 7 Dimensões do IGMA)
+        // ATUALIZADO: Eixos mostram o mapeamento dos ODS
+        const labels = [
+            'Educação (ODS 4)',
+            'Saúde (ODS 3)',
+            'Segurança (ODS 16)',
+            'Saneamento/Ambiente (ODS 6,12,13)',
+            'Gestão Fiscal',
+            'Infra/Mobilidade (ODS 9,11)',
+            'Socioeconômico (ODS 8)'
+        ];
+
+        // Estado inicial dos scores (Linha de Base = 5) para os eixos IGMA
+        let scores = {
+            educacao: 5, saude: 5, seguranca: 5, saneamento_ambiente: 5,
+            gestao_fiscal: 5, infra_mobilidade: 5, socioeconômico: 5
+        };
+        
+        // NOVO: Estado inicial do esforço (começa equilibrado)
+        let effortScores = { publico: 10, populacao: 10 };
+        let lastEffortInsight = "Faça sua primeira escolha para ver a análise de esforço.";
+
+        // Estado inicial e impacto dos ODS (0 a 100%)
+        let odsScores = {
+            'ODS 3 - Saúde': 50, 'ODS 4 - Educação': 50, 'ODS 6 - Água e Saneamento': 50,
+            'ODS 8 - Trabalho Decente e Crescimento Econômico': 50, 'ODS 9 - Indústria, Inovação e Infraestrutura': 50,
+            'ODS 11 - Cidades e Comunidades Sustentáveis': 50, 'ODS 12 - Consumo e Produção Responsáveis': 50,
+            'ODS 13 - Ação Contra a Mudança Global do Clima': 50, 'ODS 16 - Paz, Justiça e Instituições Eficazes': 50,
+        };
+
+        // Perguntas com CONTEXTO, IMPACTOS DE ESFORÇO e INSIGHTS DE ESFORÇO
+        const questions = [
+            {
+                title: "Desafio 1: O Dilema da Habitação 🏡",
+                context: "Goiânia cresce rapidamente, mas esse crescimento tem sido horizontal (espraiamento). Isso encarece a infraestrutura (água, esgoto, asfalto, ônibus) e deixa o centro da cidade com muitos lotes vazios, gerando ociosidade.",
+                text: "Onde devemos focar a construção de 100.000 novas moradias?",
+                optionA: {
+                    text: "Facilitar condomínios na periferia (Espraiamento)",
+                    description: "Expande a mancha urbana, mas aumenta distâncias e custos.",
+                    impacts: { infra_mobilidade: -2, saneamento_ambiente: -1, socioeconomico: -1, gestao_fiscal: -1 },
+                    ods: { 'ODS 11 - Cidades e Comunidades Sustentáveis': -15 },
+                    effort: { publico: 4, populacao: 1 }, // Alto custo público para levar infra
+                    effort_insight: "Esta escolha exige alto esforço do Poder Público para levar infraestrutura (asfalto, água, saúde) a áreas distantes, com baixo envolvimento da população."
+                },
+                optionB: {
+                    text: "Incentivar moradias no Centro e áreas vazias (Adensamento)",
+                    description: "Revitaliza áreas já estruturadas, otimiza serviços e transporte.",
+                    impacts: { infra_mobilidade: +2, saneamento_ambiente: +1, socioeconomico: +2, gestao_fiscal: +1 },
+                    ods: { 'ODS 11 - Cidades e Comunidades Sustentáveis': +20, 'ODS 8 - Trabalho Decente e Crescimento Econômico': +10 },
+                    effort: { publico: 3, populacao: 3 }, // Esforço público (incentivos) e privado (vontade de morar)
+                    effort_insight: "Esta escolha exige um esforço equilibrado: do Poder Público (incentivos fiscais, segurança) e da População (mudança cultural para viver em áreas centrais e verticais)."
+                }
+            },
+            {
+                title: "Desafio 2: A Guerra do Trânsito 🚗🚌",
+                context: "A frota de veículos individuais cresce mais rápido que a população. O resultado são congestionamentos, poluição e alto tempo de deslocamento, impactando a saúde mental e a produtividade da cidade.",
+                text: "Qual deve ser a prioridade de investimento em mobilidade?",
+                optionA: {
+                    text: "Expandir viadutos, pontes e estacionamentos para carros.",
+                    description: "Prioriza o transporte individual, soluções que incentivam mais carros.",
+                    impacts: { infra_mobilidade: -2, saude: -1, saneamento_ambiente: -1, seguranca: -1 },
+                    ods: { 'ODS 11 - Cidades e Comunidades Sustentáveis': -10, 'ODS 13 - Ação Contra a Mudança Global do Clima': -10 },
+                    effort: { publico: 5, populacao: 0 }, // Custo 100% público, zero mudança de hábito
+                    effort_insight: "Esta escolha é baseada em alto esforço do Poder Público (custo de obras). Ela não exige nenhuma mudança de comportamento da População."
+                },
+                optionB: {
+                    text: "Executar o plano de BRTs, ciclovias e calçadas (PlanmobGyn).",
+                    description: "Prioriza o pedestre, o transporte coletivo e ativo, reduzindo poluição.",
+                    impacts: { infra_mobilidade: +3, saude: +2, saneamento_ambiente: +1, socioeconomico: +1 },
+                    ods: { 'ODS 11 - Cidades e Comunidades Sustentáveis': +20, 'ODS 3 - Saúde': +15, 'ODS 13 - Ação Contra a Mudança Global do Clima': +15 },
+                    effort: { publico: 3, populacao: 4 }, // Custo público (obras) e alta adesão da população
+                    effort_insight: "Esta escolha exige um esforço muito alto da População (mudar hábitos, deixar o carro) e um esforço alto do Poder Público (investir e manter o sistema de qualidade)."
+                }
+            },
+            {
+                title: "Desafio 3: A Montanha de Lixo ♻️",
+                context: "Goiânia gera mais de 1,2 mil toneladas de lixo por dia, mas recicla menos de 5%. A maior parte vai para o aterro, reduzindo sua vida útil e perdendo a chance de gerar renda e proteger o meio ambiente.",
+                text: "Como melhorar a gestão de resíduos sólidos?",
+                optionA: {
+                    text: "Manter o sistema atual, focar em novos aterros sanitários.",
+                    description: "Solução reativa e insustentável a longo prazo, com altos custos ambientais.",
+                    impacts: { saneamento_ambiente: -3, saude: -1, gestao_fiscal: -1 },
+                    ods: { 'ODS 12 - Consumo e Produção Responsáveis': -20, 'ODS 11 - Cidades e Comunidades Sustentáveis': -10, 'ODS 3 - Saúde': -10 },
+                    effort: { publico: 3, populacao: 0 }, // Custo público (novo aterro)
+                    effort_insight: "Esta escolha exige esforço contínuo do Poder Público (encontrar e gerir novos aterros) e esforço zero da População."
+                },
+                optionB: {
+                    text: "Investir pesado em compostagem, coleta seletiva e educação.",
+                    description: "Ataca a raiz do problema, gera novos negócios e limpa a cidade.",
+                    impacts: { saneamento_ambiente: +3, saude: +1, socioeconomico: +1, educacao: +1, gestao_fiscal: +1 },
+                    ods: { 'ODS 12 - Consumo e Produção Responsáveis': +25, 'ODS 11 - Cidades e Comunidades Sustentáveis': +15, 'ODS 8 - Trabalho Decente e Crescimento Econômico': +10 },
+                    effort: { publico: 3, populacao: 5 }, // Esforço público (logística) e máximo da população (separar lixo)
+                    effort_insight: "Esta é uma solução de esforço máximo da População (separar o lixo corretamente) e alto esforço do Poder Público (criar a logística de coleta e usinas)."
+                }
+            },
+            {
+                title: "Desafio 4: O Motor da Economia 📈",
+                context: "A economia de Goiânia é forte em serviços, comércio e agronegócio. No entanto, para competir no futuro, é preciso diversificar e investir em áreas que gerem empregos de maior valor agregado e retenham talentos.",
+                text: "Qual deve ser a vocação econômica para gerar empregos e riqueza?",
+                optionA: {
+                    text: "Foco total na Logística do Agronegócio e Indústria tradicional.",
+                    description: "Reforça a vocação atual, mas pode não gerar empregos qualificados em massa.",
+                    impacts: { socioeconomico: +2, infra_mobilidade: -1, saneamento_ambiente: -1 },
+                    ods: { 'ODS 8 - Trabalho Decente e Crescimento Econômico': +15 },
+                    effort: { publico: 3, populacao: 1 }, // Esforço público em infraestrutura de carga
+                    effort_insight: "Esta escolha exige esforço do Poder Público (obras de infraestrutura de carga) e baixo esforço de qualificação da População em geral."
+                },
+                optionB: {
+                    text: "Foco em Economia Digital, Saúde e Turismo (ex: Art Déco).",
+                    description: "Diversifica a economia, atrai novos talentos e revitaliza a cultura.",
+                    impacts: { socioeconomico: +2, educacao: +1, infra_mobilidade: +1, gestao_fiscal: +1 },
+                    ods: { 'ODS 8 - Trabalho Decente e Crescimento Econômico': +20, 'ODS 9 - Indústria, Inovação e Infraestrutura': +15, 'ODS 11 - Cidades e Comunidades Sustentáveis': +10 },
+                    effort: { publico: 3, populacao: 4 }, // Esforço público (fomento) e da população (educação)
+                    effort_insight: "Exige alto esforço da População (qualificação, empreendedorismo) e do Poder Público (fomento à inovação, educação e infraestrutura digital)."
+                }
+            },
+            {
+                title: "Desafio 5: O Fosso do Saneamento 💧",
+                context: "Apesar dos avanços, centenas de milhares de pessoas em Goiânia ainda não têm acesso à rede de esgoto. Isso causa doenças (ODS 3), polui rios (ODS 6) e desvaloriza bairros inteiros.",
+                text: "Quase 26% da cidade (400.000 pessoas) ainda não tem rede de esgoto. Como agir?",
+                optionA: {
+                    text: "Manter o ritmo atual de investimento, priorizando outras obras.",
+                    description: "O problema será resolvido lentamente, comprometendo saúde e meio ambiente.",
+                    impacts: { saude: -2, saneamento_ambiente: -2, socioeconomico: -2 },
+                    ods: { 'ODS 6 - Água e Saneamento': -20, 'ODS 3 - Saúde': -15 },
+                    effort: { publico: 1, populacao: 0 }, // Baixo esforço público (inércia)
+                    effort_insight: "Esta escolha representa um baixo esforço do Poder Público (manter o ritmo atual) e nenhum esforço da População, que continua sofrendo o impacto."
+                },
+                optionB: {
+                    text: "Acelerar para 100% de esgoto tratado até 2030.",
+                    description: "Investimento alto agora para resolver o ODS 6 e garantir saúde pública.",
+                    impacts: { saude: +3, saneamento_ambiente: +2, socioeconomico: +2, gestao_fiscal: -1 }, // Custo fiscal alto
+                    ods: { 'ODS 6 - Água e Saneamento': +30, 'ODS 3 - Saúde': +20, 'ODS 11 - Cidades e Comunidades Sustentáveis': +10 },
+                    effort: { publico: 5, populacao: 2 }, // Esforço público (obras) e da população (custo/taxa)
+                    effort_insight: "Exige esforço máximo do Poder Público (investimento e obras) e um esforço da População (pagar taxas e lidar com os transtornos temporários das obras)."
+                }
+            },
+            {
+                title: "Desafio 6: A Qualidade da Educação 📚",
+                context: "Embora o acesso à escola esteja quase universalizado, o desafio de Goiânia (e do Brasil) é a qualidade. O IDEB mostra que há muito a melhorar para que os jovens estejam prontos para o futuro (ODS 4).",
+                text: "Melhorar a educação básica é chave para o futuro. Onde investir os recursos?",
+                optionA: {
+                    text: "Focar na expansão de vagas, construindo mais escolas.",
+                    description: "Aumenta o acesso, mas não garante a qualidade ou a inovação pedagógica.",
+                    impacts: { educacao: +1, gestao_fiscal: -1, socioeconomico: +1 },
+                    ods: { 'ODS 4 - Educação': +15 },
+                    effort: { publico: 3, populacao: 0 }, // Custo público (obras)
+                    effort_insight: "Uma escolha de esforço focado no Poder Público (construção de prédios), com baixo impacto na mudança pedagógica ou no envolvimento da População."
+                },
+                optionB: {
+                    text: "Investir em formação de professores, tecnologia e tempo integral.",
+                    description: "Melhora a qualidade do ensino, atrai talentos e prepara para o mercado.",
+                    impacts: { educacao: +3, socioeconomico: +2, gestao_fiscal: -2 }, // Custo fiscal de pessoal
+                    ods: { 'ODS 4 - Educação': +25, 'ODS 8 - Trabalho Decente e Crescimento Econômico': +10, 'ODS 9 - Indústria, Inovação e Infraestrutura': +10 },
+                    effort: { publico: 4, populacao: 3 }, // Esforço público (salários, tech) e da população (adesão)
+                    effort_insight: "Exige esforço alto do Poder Público (investir em pessoas e tecnologia) e da População (professores em formação, pais e alunos se adaptando ao tempo integral)."
+                }
+            },
+            {
+                title: "Desafio 7: A Segurança Urbana 🚨",
+                context: "A sensação de segurança impacta diretamente a qualidade de vida e o uso da cidade (ODS 16). Bairros percebidos como inseguros se tornam desertos, gerando mais insegurança. É um ciclo vicioso.",
+                text: "A segurança é uma preocupação constante. Como tornar Goiânia mais segura?",
+                optionA: {
+                    text: "Aumentar o efetivo policial e o patrulhamento ostensivo.",
+                    description: "Medida reativa que pode gerar sensação de segurança, mas não ataca as causas.",
+                    impacts: { seguranca: +1, gestao_fiscal: -1, socioeconomico: -1 },
+                    ods: { 'ODS 16 - Paz, Justiça e Instituições Eficazes': +10 },
+                    effort: { publico: 4, populacao: 0 }, // Custo público (pessoal)
+                    effort_insight: "Esta escolha foca 100% do esforço no Poder Público (aumento de efetivo e custos), sem exigir uma mudança de postura ou participação da População."
+                },
+                optionB: {
+                    text: "Investir em inteligência, monitoramento e requalificação de espaços.",
+                    description: "Abordagem preventiva que melhora a segurança e o uso da cidade.",
+                    impacts: { seguranca: +3, socioeconomico: +2, infra_mobilidade: +1, gestao_fiscal: -2 },
+                    ods: { 'ODS 16 - Paz, Justiça e Instituições Eficazes': +25, 'ODS 11 - Cidades e Comunidades Sustentáveis': +15 },
+                    effort: { publico: 3, populacao: 3 }, // Esforço público (tech) e da população (ocupar espaços)
+                    effort_insight: "Exige esforço do Poder Público (tecnologia, iluminação) e um esforço crucial da População (ocupar os parques e praças, criando 'olhos na rua')."
+                }
+            },
+            {
+                title: "Desafio 8: A Saúde da População 🩺",
+                context: "O modelo de saúde focado em hospitais (curativo) é caro e sobrecarregado. O ODS 3 (Saúde e Bem-Estar) incentiva um foco maior na prevenção, tratando problemas antes que se agravem.",
+                text: "O sistema de saúde está sobrecarregado. Qual é a melhor estratégia?",
+                optionA: {
+                    text: "Construir novos hospitais e unidades de pronto atendimento.",
+                    description: "Expande a capacidade, mas foca na doença, não na prevenção.",
+                    impacts: { saude: +1, gestao_fiscal: -2 },
+                    ods: { 'ODS 3 - Saúde': +15 },
+                    effort: { publico: 5, populacao: 0 }, // Custo público (obras e equipamentos)
+                    effort_insight: "Esta é uma solução de esforço máximo do Poder Público (obras, equipamentos, pessoal), focada em tratar a doença. Não exige mudança de hábitos da População."
+                },
+                optionB: {
+                    text: "Investir em atenção primária, saúde da família e telemedicina.",
+                    description: "Foca na prevenção, descentraliza o atendimento e usa tecnologia.",
+                    impacts: { saude: +3, socioeconomico: +1, gestao_fiscal: +1 }, // Mais eficiente
+                    ods: { 'ODS 3 - Saúde': +25, 'ODS 9 - Indústria, Inovação e Infraestrutura': +10 },
+                    effort: { publico: 3, populacao: 4 }, // Esforço público (gestão) e da população (prevenção)
+                    effort_insight: "Exige alto esforço da População (fazer exames preventivos, usar o postinho do bairro) e do Poder Público (gerir a rede de atenção primária e telemedicina)."
+                }
+            },
+            {
+                title: "Desafio 9: A Cultura e o Patrimônio 🎨",
+                context: "Goiânia tem o maior acervo Art Déco da América Latina, um patrimônio subutilizado. Valorizar a cultura (ODS 11) não é apenas preservar prédios, mas gerar emprego, turismo e senso de pertencimento.",
+                text: "Como valorizar a identidade Art Déco e a cultura da cidade?",
+                optionA: {
+                    text: "Focar em eventos pontuais e grandes shows para atrair turistas.",
+                    description: "Gera visibilidade de curto prazo, mas não cria um legado cultural sustentável.",
+                    impacts: { socioeconomico: +1 },
+                    ods: { 'ODS 11 - Cidades e Comunidades Sustentáveis': +5 },
+                    effort: { publico: 3, populacao: 1 }, // Custo público (cachês)
+                    effort_insight: "Exige esforço do Poder Público (patrocínio de eventos), com um papel passivo da População (consumidora dos shows)."
+                },
+                optionB: {
+                    text: "Requalificar o Setor Central, restaurar edifícios e criar museus.",
+                    description: "Fortalece a identidade, atrai turismo cultural e promove a ocupação.",
+                    impacts: { socioeconomico: +2, infra_mobilidade: +1, educacao: +1, gestao_fiscal: +1 },
+                    ods: { 'ODS 11 - Cidades e Comunidades Sustentáveis': +20, 'ODS 8 - Trabalho Decente e Crescimento Econômico': +10 },
+                    effort: { publico: 4, populacao: 3 }, // Custo público (restauro) e da população (ocupar)
+                    effort_insight: "Exige alto esforço do Poder Público (restauro, segurança) e da População (empreendedores, artistas e cidadãos ocupando e valorizando o centro)."
+                }
+            },
+            {
+                title: "Desafio 10: Governança e Transparência 🏛️",
+                context: "A confiança na gestão é a base da democracia (ODS 16). Sem transparência e participação, as políticas públicas perdem legitimidade e o cidadão não se sente parte das soluções, apenas vítima dos problemas.",
+                text: "Como melhorar a governança e a participação cidadã?",
+                optionA: {
+                    text: "Focar em sistemas internos de controle e auditoria.",
+                    description: "Importante, mas não é percebido pela população como transparência.",
+                    impacts: { gestao_fiscal: +1, socioeconomico: +1 },
+                    ods: { 'ODS 16 - Paz, Justiça e Instituições Eficazes': +10 },
+                    effort: { publico: 3, populacao: 0 }, // Esforço interno do governo
+                    effort_insight: "Esta escolha foca o esforço 100% dentro do Poder Público (controladoria, auditoria), sem envolver a População no processo."
+                },
+                optionB: {
+                    text: "Implementar plataformas de participação digital e dados abertos.",
+                    description: "Empodera o cidadão, aumenta a transparência e a legitimidade.",
+                    impacts: { gestao_fiscal: +2, socioeconomico: +2, educacao: +1, infra_mobilidade: +1 },
+                    ods: { 'ODS 16 - Paz, Justiça e Instituições Eficazes': +25, 'ODS 9 - Indústria, Inovação e Infraestrutura': +10 },
+                    effort: { publico: 3, populacao: 4 }, // Esforço público (plataforma) e da população (participar)
+                    effort_insight: "Exige alto esforço da População (doar tempo para participar, fiscalizar) e do Poder Público (criar e manter canais de escuta e dados abertos)."
+                }
+            }
+        ];
+
+
+        // --- 2. LÓGICA DO JOGO ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializa os dois gráficos de radar (um para o jogo, um para o resultado)
+            radarChart = initRadarChart('radar-chart-result'); // O gráfico do resultado
+            
+            // Inicializa os dois gráficos de esforço
+            effortChartGame = initEffortChart('effort-chart-game');
+            effortChartResult = initEffortChart('effort-chart-result');
+
+            showQuestion(); // Mostra a primeira pergunta
+            updateEffortChart(); // Atualiza o gráfico de esforço para o estado inicial
+            
+            document.getElementById('restart-button').addEventListener('click', restartGame);
+        });
+
+        // Mostra a pergunta atual
+        function showQuestion() {
+            if (currentStep >= questions.length) {
+                showResult();
+                return;
+            }
+
+            // Atualiza barra de progresso
+            const progress = ((currentStep + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            const q = questions[currentStep];
+            document.getElementById('question-title').innerText = q.title;
+            document.getElementById('question-context').innerText = q.context; // NOVO
+            document.getElementById('question-text').innerText = q.text;
+            document.getElementById('effort-insight-text').innerText = lastEffortInsight; // Atualiza o insight
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            // Cria o botão para a Opção A
+            const buttonA = createOptionButton(q.optionA, 'A');
+            buttonA.addEventListener('click', () => selectOption(q.optionA));
+            optionsContainer.appendChild(buttonA);
+
+            // Cria o botão para a Opção B
+            const buttonB = createOptionButton(q.optionB, 'B');
+            buttonB.addEventListener('click', () => selectOption(q.optionB));
+            optionsContainer.appendChild(buttonB);
+        }
+
+        // Cria um botão de opção
+        function createOptionButton(option, type) {
+            const button = document.createElement('div');
+            button.className = "bg-gray-700 p-6 rounded-lg border-2 border-gray-600 hover:border-emerald-500 transform hover:scale-105 transition-all cursor-pointer";
+            button.innerHTML = `
+                <h3 class="font-semibold text-lg text-white">${option.text}</h3>
+                <p class="text-gray-400 text-sm mt-1">${option.description}</p>
+            `;
+            return button;
+        }
+
+        // Processa a escolha do usuário
+        function selectOption(choice) {
+            // 1. Aplica os impactos nos scores do IGMA
+            const impacts = choice.impacts;
+            for (const key in impacts) {
+                if (scores.hasOwnProperty(key)) {
+                    scores[key] += impacts[key];
+                    if (scores[key] > 10) scores[key] = 10;
+                    if (scores[key] < 0) scores[key] = 0;
+                }
+            }
+
+            // 2. Aplica os impactos nos scores dos ODS
+            const odsImpacts = choice.ods;
+            for (const key in odsImpacts) {
+                if (odsScores.hasOwnProperty(key)) {
+                    odsScores[key] += odsImpacts[key];
+                    if (odsScores[key] > 100) odsScores[key] = 100;
+                    if (odsScores[key] < 0) odsScores[key] = 0;
+                }
+            }
+            
+            // 3. NOVO: Aplica impactos de esforço
+            effortScores.publico += choice.effort.publico;
+            effortScores.populacao += choice.effort.populacao;
+            lastEffortInsight = choice.effort_insight; // Armazena o insight da escolha
+
+            // 4. Atualiza o gráfico de esforço do JOGO
+            updateEffortChart();
+
+            // 5. Avança para a próxima pergunta
+            currentStep++;
+            showQuestion();
+        }
+
+        // Mostra a tela de resultados
+        function showResult() {
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('result-container').classList.remove('hidden');
+            
+            // Calcula o score médio final para determinar o cenário
+            const finalIgmaScores = Object.values(scores);
+            const avgIgmaScore = finalIgmaScores.reduce((a, b) => a + b, 0) / finalIgmaScores.length;
+
+            const finalOdsScores = Object.values(odsScores);
+            const avgOdsScore = finalOdsScores.reduce((a, b) => a + b, 0) / finalOdsScores.length;
+
+            let scenario;
+            let odsInsights = "";
+
+            // Lógica dos Cenários
+            if (avgIgmaScore < 4.5) {
+                scenario = {
+                    title: "Cenário: Goiânia 2033 - O Futuro Desorganizado",
+                    image: "https://placehold.co/600x400/b91c1c/f9fafb?text=Futuro+Congestionado+e+Desigual",
+                    description: "Bem-vindo a Goiânia 2033. Suas escolhas levaram a um crescimento desordenado. A infraestrutura básica está sobrecarregada, o trânsito é caótico e a desigualdade socioeconômica se aprofundou. A gestão fiscal enfrenta desafios para sustentar a expansão. A qualidade de vida geral e o ambiente não melhoraram."
+                };
+                odsInsights = "Muitos ODS estão estagnados ou regrediram, especialmente **ODS 11 (Cidades Sustentáveis)**, **ODS 6 (Saneamento)** e **ODS 13 (Ação Climática)**. Ações limitadas em sustentabilidade impactaram negativamente a agenda 2030.";
+            } else if (avgIgmaScore >= 7.5 && avgOdsScore >= 70) {
+                scenario = {
+                    title: "Cenário: Goiânia 2033 - O Centenário Sustentável e IGMA de Excelência!",
+                    image: "https://placehold.co/600x400/059669/f9fafb?text=Futuro+Pr%C3%B3spero+e+Inclusivo",
+                    description: "Parabéns! Suas decisões construíram uma Goiânia exemplar para o centenário. A cidade se destaca em todas as dimensões do IGMA: Educação, Saúde, Segurança, Saneamento, Infraestrutura, Desenvolvimento Socioeconômico e Gestão Fiscal. Uma cidade humana, inovadora e resiliente!"
+                };
+                odsInsights = "A maioria dos ODS foi fortemente impulsionada, com destaque para **ODS 11 (Cidades Sustentáveis)**, **ODS 3 (Saúde)**, **ODS 4 (Educação)**, **ODS 6 (Saneamento)** e **ODS 16 (Paz e Justiça)**. Goiânia é um modelo de alinhamento com a Agenda 2030!";
+            } else {
+                scenario = {
+                    title: "Cenário: Goiânia 2033 - Progresso com Desafios",
+                    image: "https://placehold.co/600x400/0284c7/f9fafb?text=Futuro+Eficiente+mas+com+Lacunas",
+                    description: "Sua Goiânia 2033 mostra progresso em algumas áreas, como infraestrutura e saneamento, mas ainda enfrenta desafios. A eficiência pode ter sido priorizada sobre a inclusão social ou a sustentabilidade. A gestão é competente, mas há oportunidades perdidas para um desenvolvimento mais equilibrado."
+                };
+                odsInsights = "Houve avanço em alguns ODS, como **ODS 6 (Saneamento)** e **ODS 9 (Infraestrutura)**, mas outros como **ODS 13 (Ação Climática)** e **ODS 12 (Consumo Responsável)** ainda precisam de mais atenção. Um caminho de progresso, mas com lacunas a serem preenchidas.";
+            }
+
+            // ATUALIZADO: Mapeia os scores dos ODS (0-100) para a escala do gráfico (0-10)
+            const odsNormalizedData = [
+                odsScores['ODS 4 - Educação'] / 10, // Mapeia para 'Educação'
+                odsScores['ODS 3 - Saúde'] / 10, // Mapeia para 'Saúde'
+                odsScores['ODS 16 - Paz, Justiça e Instituições Eficazes'] / 10, // Mapeia para 'Segurança'
+                (odsScores['ODS 6 - Água e Saneamento'] + odsScores['ODS 12 - Consumo e Produção Responsáveis'] + odsScores['ODS 13 - Ação Contra a Mudança Global do Clima']) / 30, // Média dos 3 ODS / 10
+                null, // 'Gestão Fiscal' não tem ODS direto
+                (odsScores['ODS 9 - Indústria, Inovação e Infraestrutura'] + odsScores['ODS 11 - Cidades e Comunidades Sustentáveis']) / 20, // Média dos 2 ODS / 10
+                odsScores['ODS 8 - Trabalho Decente e Crescimento Econômico'] / 10  // Mapeia para 'Socioeconômico'
+            ];
+
+            // Atualiza os dados do gráfico de RADAR de resultado
+            radarChart.data.datasets[0].data = Object.values(scores); // Data 1: IGMA
+            radarChart.data.datasets[1].data = odsNormalizedData; // Data 2: ODS
+            radarChart.update();
+
+            // Atualiza o gráfico de ESFORÇO de resultado
+            effortChartResult.data.datasets[0].data = [effortScores.publico, effortScores.populacao];
+            effortChartResult.update();
+
+
+            // Atualiza a UI do resultado
+            document.getElementById('result-title').innerText = scenario.title;
+            document.getElementById('result-image').src = scenario.image;
+            document.getElementById('result-image').alt = scenario.title;
+            document.getElementById('result-description').innerText = scenario.description;
+
+            // Geração de Insights Estratégicos Dinâmicos
+            const strengthsList = document.getElementById('strengths-list');
+            const weaknessesList = document.getElementById('weaknesses-list');
+            strengthsList.innerHTML = '';
+            weaknessesList.innerHTML = '';
+
+            const scoreEntries = Object.keys(scores).map((key, index) => {
+                return { key: key, label: labels[index], score: scores[key] };
+            });
+
+            scoreEntries.sort((a, b) => b.score - a.score);
+
+            const topScores = scoreEntries.slice(0, 2).filter(item => item.score > 5.5);
+            if (topScores.length > 0) {
+                topScores.forEach(item => {
+                    strengthsList.innerHTML += createInsightCard(item, 'strength');
+                });
+            } else {
+                strengthsList.innerHTML = `<p class="text-sm text-gray-400">Nenhum eixo se destacou positivamente.</p>`;
+            }
+
+            const bottomScores = scoreEntries.slice(-2).reverse().filter(item => item.score < 4.5);
+            if (bottomScores.length > 0) {
+                bottomScores.forEach(item => {
+                    weaknessesList.innerHTML += createInsightCard(item, 'weakness');
+                });
+            } else {
+                weaknessesList.innerHTML = `<p class="text-sm text-gray-400">Nenhum eixo ficou criticamente descoberto.</p>`;
+            }
+
+            // Atualiza Insights ODS
+            const odsImpactsDiv = document.getElementById('ods-impacts');
+            odsImpactsDiv.innerHTML = `<h3 class="font-semibold text-white mb-2 text-lg">Impacto nos ODS</h3><p>${odsInsights.replace(/\*\*(.*?)\*\*/g, '<strong class="text-emerald-300">$1</strong>')}</p>`;
+            
+            let odsDetails = '';
+            for (const ods in odsScores) {
+                const score = odsScores[ods].toFixed(0);
+                const color = score > 65 ? 'bg-emerald-600' : score < 40 ? 'bg-rose-600' : 'bg-gray-600';
+                odsDetails += `<span class="inline-block ${color} text-white px-3 py-1 rounded-full text-xs mr-2 mb-2">${ods}: ${score}%</span>`;
+            }
+            odsImpactsDiv.innerHTML += `<div class="mt-4">${odsDetails}</div>`;
+        }
+
+        // Reinicia o jogo
+        function restartGame() {
+            currentStep = 0;
+            scores = { educacao: 5, saude: 5, seguranca: 5, saneamento_ambiente: 5, gestao_fiscal: 5, infra_mobilidade: 5, socioeconomico: 5 };
+            odsScores = {
+                'ODS 3 - Saúde': 50, 'ODS 4 - Educação': 50, 'ODS 6 - Água e Saneamento': 50,
+                'ODS 8 - Trabalho Decente e Crescimento Econômico': 50, 'ODS 9 - Indústria, Inovação e Infraestrutura': 50,
+                'ODS 11 - Cidades e Comunidades Sustentáveis': 50, 'ODS 12 - Consumo e Produção Responsáveis': 50,
+                'ODS 13 - Ação Contra a Mudança Global do Clima': 50, 'ODS 16 - Paz, Justiça e Instituições Eficazes': 50,
+            };
+            // NOVO: Reseta scores de esforço
+            effortScores = { publico: 10, populacao: 10 };
+            lastEffortInsight = "Faça sua primeira escolha para ver a análise de esforço.";
+            
+            document.getElementById('result-container').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            
+            updateEffortChart(); // Atualiza o gráfico de esforço do jogo
+            showQuestion();
+        }
+
+        // --- 3. LÓGICA DOS GRÁFICOS ---
+
+        // NOVO: Helper para criar card de insight
+        function createInsightCard(item, type) {
+            const isStrength = type === 'strength';
+            const bgColor = 'bg-gray-700/50';
+            const borderColor = isStrength ? 'border-emerald-500' : 'border-rose-500';
+            const textColor = isStrength ? 'text-emerald-400' : 'text-rose-400';
+            
+            return `
+                <div class="${bgColor} p-3 rounded-lg border-l-4 ${borderColor} shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm font-semibold text-white">${item.label}</p>
+                        <p class="text-sm font-bold ${textColor}">${item.score.toFixed(1)}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Inicializa o gráfico de RADAR
+        function initRadarChart(canvasId) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                    {
+                        label: 'Desempenho (IGMA)',
+                        data: Object.values(scores), // Começa com os scores base
+                        fill: true,
+                        backgroundColor: 'rgba(52, 211, 153, 0.2)', // emerald-400
+                        borderColor: 'rgba(52, 211, 153, 1)',
+                        pointBackgroundColor: 'rgba(52, 211, 153, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(52, 211, 153, 1)'
+                    },
+                    // NOVO: Dataset para os ODS
+                    {
+                        label: 'Desempenho (ODS Normalizado)',
+                        data: [5, 5, 5, 5, null, 5, 5], // Começa com a linha de base (null para Gestão Fiscal)
+                        fill: true,
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)', // blue-500
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                            pointLabels: {
+                                color: '#D1D5DB',
+                                font: { size: 13, weight: '600', family: 'Inter, sans-serif' }
+                            },
+                            ticks: {
+                                color: '#9CA3AF', backdropColor: '#1F2937', stepSize: 2, font: { size: 10 }
+                            },
+                            min: 0,
+                            max: 10
+                        }
+                    },
+                    plugins: {
+                        // ATUALIZADO: Mostra a legenda para diferenciar IGMA e ODS
+                        legend: { 
+                            display: true,
+                            labels: {
+                                color: '#D1D5DB' // text-gray-300
+                            }
+                        },
+                        tooltip: { 
+                            callbacks: { 
+                                label: (context) => {
+                                    // Evita mostrar tooltip para 'Gestão Fiscal' dos ODS
+                                    if (context.raw === null) return null;
+                                    return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
+                                }
+                            } 
+                        }
+                    }
+                }
+            });
+        }
+
+        // NOVO: Inicializa o gráfico de ESFORÇO (Horizontal Bar)
+        function initEffortChart(canvasId) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Poder Público', 'População'],
+                    datasets: [{
+                        label: 'Esforço Acumulado',
+                        data: [effortScores.publico, effortScores.populacao],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)', // blue-500
+                            'rgba(52, 211, 153, 0.7)'  // emerald-400
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(52, 211, 153, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Faz o gráfico ser horizontal
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#9CA3AF' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#D1D5DB', font: { size: 14, weight: '600' } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (context) => `Esforço: ${context.raw}` } }
+                    }
+                }
+            });
+        }
+
+        // NOVO: Atualiza o gráfico de ESFORÇO do jogo
+        function updateEffortChart() {
+            if (effortChartGame) {
+                effortChartGame.data.datasets[0].data = [effortScores.publico, effortScores.populacao];
+                effortChartGame.update();
+            }
+        }
+
+    </script>
+</body>
+</html>
+

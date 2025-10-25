@@ -39,6 +39,10 @@
             <p class="text-sm text-gray-400 mt-3 max-w-3xl mx-auto">
                 <strong>IGMA:</strong> Índice de Gestão Municipal Aquila (mede a eficiência da gestão pública em 7 eixos) | <strong>ODS:</strong> Objetivos de Desenvolvimento Sustentável (metas globais da ONU para 2030).
             </p>
+            <!-- NOVO: PARÁGRAFO INTRODUTÓRIO -->
+            <p class="text-lg text-emerald-100 bg-gray-700/50 p-4 rounded-lg mt-6 max-w-4xl mx-auto border border-gray-600">
+                Você é o(a) <strong>estrategista-chefe</strong> de Goiânia! Sua missão é tomar 10 decisões críticas que moldarão o centenário da capital. Cada escolha afeta a gestão (IGMA), a sustentabilidade (ODS) e o esforço de todos (Público x População). Vamos começar?
+            </p>
         </header>
 
         <!-- Seção do Jogo (Escolhas) -->
@@ -58,6 +62,9 @@
                         <p id="question-context" class="text-gray-300 mb-4 text-base"></p>
                         <p id="question-text" class="text-gray-300 mb-6 text-lg font-semibold"></p>
                     </div>
+
+                    <!-- NOVO: DESTAQUE PARA CLICAR -->
+                    <p class="text-center text-emerald-300 font-semibold mb-4 text-lg animate-pulse">👇 Clique em uma opção para decidir 👇</p>
 
                     <!-- Container das Opções -->
                     <div id="options-container" class="grid grid-cols-1 gap-4">
@@ -155,7 +162,7 @@
             </div>
         </div>
 
-        <!-- NOVO: Seção de Fontes -->
+        <!-- Seção de Fontes -->
         <footer class="text-center mt-12 border-t border-gray-700 pt-6">
             <h4 class="font-semibold text-lg text-gray-300 mb-2">Fontes e Referências</h4>
             <p class="text-xs text-gray-500">
@@ -633,7 +640,7 @@
         // Reinicia o jogo
         function restartGame() {
             currentStep = 0;
-            scores = { educacao: 5, saude: 5, seguranca: 5, saneamento_ambiente: 5, gestao_fiscal: 5, infra_mobilidade: 5, socioeconomico: 5 };
+            scores = { educacao: 5, saude: 5, seguranca: 5, saneamento_ambiente: 5, gestao_fiscal: 5, infra_mobilidade: 5, socioeconômico: 5 };
             odsScores = {
                 'ODS 3 - Saúde': 50, 'ODS 4 - Educação': 50, 'ODS 6 - Água e Saneamento': 50,
                 'ODS 8 - Trabalho Decente e Crescimento Econômico': 50, 'ODS 9 - Indústria, Inovação e Infraestrutura': 50,
